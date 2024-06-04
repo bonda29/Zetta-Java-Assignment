@@ -8,9 +8,13 @@ import tech.bonda.zja.service.CostService;
 import tech.bonda.zja.util.CSVParser;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static tech.bonda.zja.util.DateUtil.isAfter;
 import static tech.bonda.zja.util.DateUtil.isBefore;
@@ -19,18 +23,32 @@ import static tech.bonda.zja.util.DateUtil.isBefore;
 @Slf4j
 @RequiredArgsConstructor
 public class CostServiceImpl implements CostService {
-    private static final List<CostRecord> costRecords;
+    private static final List<CostRecord> costRecords = new ArrayList<>();
 
     static {
-        costRecords = CSVParser.parseCostRecords("src/main/resources/costs_export.csv");
+        log.info("Loading cost records...");
+
+        // Capture the start time
+        long startTime = System.currentTimeMillis();
+
+        for (int i = 0; i < 3; i++) { // Load the records 3 times for testing
+            costRecords.addAll(CSVParser.parseCostRecords("src/main/resources/costs_export.csv"));
+        }
+
+        // Capture the end time
+        long endTime = System.currentTimeMillis();
+
+        // Calculate the elapsed time
+        long elapsedTime = endTime - startTime;
+
         log.info("Cost records loaded: {}", costRecords.size());
         log.info("First cost record: {}", costRecords.get(0));
+        log.info("Time taken to load cost records: {} ms", elapsedTime);
     }
-
 
     @Override
     public BigDecimal getTotalCost(Map<String, String> filters) {
-        return costRecords.stream()
+        return costRecords.parallelStream()
                 .filter(costRecord -> filters.get("startTime") == null || isAfter(costRecord.getUsageStartTime(), filters.get("startTime")))
                 .filter(costRecord -> filters.get("endTime") == null || isBefore(costRecord.getUsageStartTime(), filters.get("endTime")))
                 .filter(costRecord -> filters.get("location") == null || costRecord.getLocationLocation().equals(filters.get("location")))
@@ -42,22 +60,36 @@ public class CostServiceImpl implements CostService {
     @Override
     public Map<String, BigDecimal> getCostGrouped(List<String> groupByFields) {
         Map<String, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
-        Map<String, BigDecimal> response = new LinkedHashMap<>();
+        Map<String, BigDecimal> response = new ConcurrentHashMap<>();
 
-        for (Map.Entry<String, List<CostRecord>> entry : groupedEntries.entrySet()) {
-            BigDecimal groupCost = entry.getValue().stream()
+        groupedEntries.entrySet().parallelStream().forEach(entry -> {
+            BigDecimal groupCost = entry.getValue().parallelStream()
                     .map(CostRecord::getCost)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             response.put(entry.getKey(), groupCost);
-
-        }
+        });
 
         return response;
     }
 
     private Map<String, List<CostRecord>> groupEntries(List<String> groupBy) {
-        // i can use Collectors.groupingBy()
-        return null;
+        Map<String, Function<CostRecord, String>> groupByFunctions = new HashMap<>();
+        groupByFunctions.put("date", costRecord -> costRecord.getUsageStartTime().toLocalDate().toString());
+        groupByFunctions.put("country", CostRecord::getLocationCountry);
+        groupByFunctions.put("service", CostRecord::getServiceId);
+
+        Map<String, List<CostRecord>> groupedEntries = new ConcurrentHashMap<>();
+
+        groupBy.parallelStream().forEach(group -> {
+            Function<CostRecord, String> groupByFunction = groupByFunctions.get(group);
+            if (groupByFunction != null) {
+                Map<String, List<CostRecord>> groupedByCurrentField = costRecords.parallelStream()
+                        .collect(Collectors.groupingBy(groupByFunction));
+                groupedByCurrentField.forEach((key, value) -> groupedEntries.put(group + ":" + key, value));
+            }
+        });
+
+        return groupedEntries;
     }
 
     @Override
