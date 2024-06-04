@@ -1,13 +1,15 @@
-package tech.bonda.zja.models;
+package tech.bonda.zja.models.ignored;
 
 import com.opencsv.bean.CsvBindByName;
+import com.opencsv.bean.CsvCustomBindByName;
 import lombok.Data;
+import tech.bonda.zja.converter.BigDecimalConverter;
 
 import java.math.BigDecimal;
 
 @Data
 public class Credits {
-    @CsvBindByName(column = "credits.amount")
+    @CsvCustomBindByName(column = "credits.amount", converter = BigDecimalConverter.class)
     private BigDecimal amount;
 
     @CsvBindByName(column = "credits.full_name")

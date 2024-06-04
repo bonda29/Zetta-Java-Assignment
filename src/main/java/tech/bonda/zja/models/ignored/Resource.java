@@ -1,4 +1,4 @@
-package tech.bonda.zja.models;
+package tech.bonda.zja.models.ignored;
 
 import com.opencsv.bean.CsvBindByName;
 import lombok.Data;

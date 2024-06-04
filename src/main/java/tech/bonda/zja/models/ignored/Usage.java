@@ -1,17 +1,19 @@
-package tech.bonda.zja.models;
+package tech.bonda.zja.models.ignored;
 
 import com.opencsv.bean.CsvBindByName;
+import com.opencsv.bean.CsvCustomBindByName;
 import lombok.Data;
+import tech.bonda.zja.converter.BigDecimalConverter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 public class Usage {
-    @CsvBindByName(column = "usage.amount")
+    @CsvCustomBindByName(column = "usage.amount", converter = BigDecimalConverter.class)
     private BigDecimal amount;
 
-    @CsvBindByName(column = "usage.amount_in_pricing_units")
+    @CsvCustomBindByName(column = "usage.amount_in_pricing_units", converter = BigDecimalConverter.class)
     private BigDecimal amountInPricingUnits;
 
     @CsvBindByName(column = "usage.pricing_unit")
@@ -20,9 +22,4 @@ public class Usage {
     @CsvBindByName(column = "usage.unit")
     private String unit;
 
-    @CsvBindByName(column = "usage_end_time")
-    private LocalDateTime usageEndTime;
-
-    @CsvBindByName(column = "usage_start_time")
-    private LocalDateTime usageStartTime;
 }

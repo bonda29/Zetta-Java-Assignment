@@ -10,6 +10,7 @@ import tech.bonda.zja.models.CostRecord;
 import tech.bonda.zja.service.CostService;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,17 @@ public class CostController {
     private final CostService costService;
 
     @GetMapping("/total-cost")
-    public ResponseEntity<BigDecimal> getTotalCost(@RequestParam Map<String, String> filters) {
+    public ResponseEntity<BigDecimal> getTotalCost(@RequestParam(required = false) String startTime,
+                                                   @RequestParam(required = false) String endTime,
+                                                   @RequestParam(required = false) String location,
+                                                   @RequestParam(required = false) String skuId) {
+
+        Map<String, String> filters = new HashMap<>();
+        filters.put("startTime", startTime);
+        filters.put("endTime", endTime);
+        filters.put("location", location);
+        filters.put("skuId", skuId);
+
         return ResponseEntity.ok(costService.getTotalCost(filters));
     }
 
