@@ -1,6 +1,15 @@
 package tech.bonda.zja.controllers;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,13 +46,29 @@ public class CostController {
     }
 
     @GetMapping("/cost-grouped")
-    public ResponseEntity<?> getCostGrouped(@RequestParam List<String> groupByFields) {//todo: return type
-        return ResponseEntity.ok(costService.getCostGrouped(groupByFields));
+    public ResponseEntity<?> getCostGrouped(@RequestParam(required = false) List<String> fields,
+                                            @RequestParam(defaultValue = "false") boolean isSorted) {//todo: return type
+        return ResponseEntity.ok(costService.getCostGrouped(fields, isSorted));
     }
+
 
     @GetMapping("/search")
-    public ResponseEntity<List<CostRecord>> searchByLabelAndCountry(@RequestParam String label, @RequestParam String country, @RequestParam int page, @RequestParam int size) {
-        return ResponseEntity.ok(costService.searchByLabelAndCountry(label, country, page, size));
-    }
+    public ResponseEntity<PagedModel<EntityModel<CostRecord>>> searchByLabelAndCountry(@RequestParam(required = false) String labelKey,
+                                                                                       @RequestParam(required = false) String labelValue,
+                                                                                       @RequestParam(required = false) String country,
+                                                                                       @RequestParam @Min(1) int page,
+                                                                                       @RequestParam @Min(0) @Max(20) int size,
+                                                                                       PagedResourcesAssembler<CostRecord> assembler) {
 
+        Pageable pageRequest = PageRequest.of(page, size);
+
+        List<CostRecord> allEntities = costService.searchByLabelAndCountry(labelKey, labelValue, country);
+        int start = (int) pageRequest.getOffset();
+        int end = Math.min((start + pageRequest.getPageSize()), allEntities.size());
+
+        List<CostRecord> pageContent = allEntities.subList(start, end);
+        Page<CostRecord> costRecordPage = new PageImpl<>(pageContent, pageRequest, allEntities.size());
+
+        return ResponseEntity.ok(assembler.toModel(costRecordPage));
+    }
 }

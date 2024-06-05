@@ -1,3 +1,5 @@
 spring:
   application:
     name: Zetta Java Assignment
+  jackson:
+    time-zone: UTC

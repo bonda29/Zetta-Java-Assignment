@@ -9,6 +9,7 @@ import tech.bonda.zja.util.CSVParser;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +34,8 @@ public class CostServiceImpl implements CostService {
         for (int i = 0; i < 1; i++) { // Load the records n times for testing
             costRecords.addAll(CSVParser.parseCostRecords("src/main/resources/costs_export.csv"));
         }
+        //sort the records by id
+        costRecords.sort(Comparator.comparing(CostRecord::getId));
 
         // Capture the end time
         long endTime = System.currentTimeMillis();
@@ -41,7 +44,7 @@ public class CostServiceImpl implements CostService {
         long elapsedTime = endTime - startTime;
 
         log.info("Cost records loaded: {}", costRecords.size());
-        log.info("First cost record: {}", costRecords.get(0));
+        log.info("First cost record: {}", costRecords.get(60));
         log.info("Time taken to load cost records: {} ms", elapsedTime);
     }
 
@@ -92,7 +95,7 @@ public class CostServiceImpl implements CostService {
     }
 */
     @Override
-    public List<Map<List<String>, BigDecimal>> getCostGrouped(List<String> groupByFields) {
+    public List<Map<List<String>, BigDecimal>> getCostGrouped(List<String> groupByFields, boolean isSorted) {
         var groupedEntries = groupEntries(groupByFields);
         List<Map<List<String>, BigDecimal>> response = new ArrayList<>();
 
@@ -105,10 +108,22 @@ public class CostServiceImpl implements CostService {
             response.add(group);
         });
 
+        if (isSorted) {
+            return sortGroupedEntries(response);
+        }
+
         return response;
     }
 
-    public Map<List<String>, List<CostRecord>> groupEntries(List<String> groupBy) {
+    private Map<List<String>, List<CostRecord>> groupEntries(List<String> groupBy) {
+        if (groupBy == null || groupBy.isEmpty()) {
+            Map<List<String>, List<CostRecord>> response = new ConcurrentHashMap<>();
+            List<String> key = new ArrayList<>();
+            key.add("cost");
+            response.put(key, costRecords);
+            return response;
+        }
+
         Map<List<String>, List<CostRecord>> groupedEntries = new ConcurrentHashMap<>();
 
         List<Function<CostRecord, String>> groupByFunctions = new ArrayList<>();
@@ -140,10 +155,40 @@ public class CostServiceImpl implements CostService {
         return groupedEntries;
     }
 
-    @Override
-    public List<CostRecord> searchByLabelAndCountry(String label, String country, int page, int size) {
-        return null;
+    private List<Map<List<String>, BigDecimal>> sortGroupedEntries(List<Map<List<String>, BigDecimal>> groupedEntries) {
+        return groupedEntries.stream()
+                .sorted((entry1, entry2) -> {
+                    List<String> key1 = entry1.keySet().iterator().next();
+                    List<String> key2 = entry2.keySet().iterator().next();
+                    return key1.get(0).compareTo(key2.get(0));
+                })
+                .collect(Collectors.toList());
     }
 
+    @Override
+    public List<CostRecord> searchByLabelAndCountry(String labelKey, String labelValue, String country) {
+        List<CostRecord> filteredRecords = costRecords;
+
+        if (labelKey != null && labelValue != null)
+            filteredRecords = filterByLabelKeyAndValue(costRecords, labelKey, labelValue);
+        else if (country != null)
+            filteredRecords = filterByCountry(filteredRecords, country);
+
+        return filteredRecords;
+    }
+
+    @SuppressWarnings({"SameParameterValue", "EqualsBetweenInconvertibleTypes"})
+    private List<CostRecord> filterByLabelKeyAndValue(List<CostRecord> costRecords, String labelKey, String labelValue) {
+        return costRecords.parallelStream()
+                .filter(costRecord -> costRecord.getLabels().stream()
+                        .anyMatch(label -> label.getKey().equals("[" + labelKey + "]") && label.getValue().equals("[" + labelValue + "]")))
+                .collect(Collectors.toList());
+    }
+
+    private List<CostRecord> filterByCountry(List<CostRecord> costRecords, String country) {
+        return costRecords.parallelStream()
+                .filter(costRecord -> costRecord.getLocationCountry().equals(country))
+                .collect(Collectors.toList());
+    }
 
 }

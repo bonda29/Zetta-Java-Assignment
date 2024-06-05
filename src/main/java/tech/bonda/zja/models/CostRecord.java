@@ -5,9 +5,11 @@ import com.opencsv.bean.CsvCustomBindByName;
 import lombok.Data;
 import tech.bonda.zja.converter.BigDecimalConverter;
 import tech.bonda.zja.converter.DateConverter;
+import tech.bonda.zja.converter.LabelConverter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class CostRecord {
@@ -32,8 +34,8 @@ public class CostRecord {
     @CsvBindByName(column = "invoice.month")
     private String invoiceMonth;
 
-    @CsvBindByName(column = "labels")
-    private String labels;
+    @CsvCustomBindByName(column = "labels", converter = LabelConverter.class)
+    private List<Label> labels;
 
     @CsvBindByName(column = "location.country")
     private String locationCountry;
