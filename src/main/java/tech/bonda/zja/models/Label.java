@@ -8,39 +8,39 @@ import java.util.List;
 @Data
 public class Label {
     @JsonProperty("value.stem")
-    private List<String> valueStem;
+    private String valueStem;
 
     @JsonProperty("key.prefix")
-    private List<String> keyPrefix;
+    private String keyPrefix;
 
     @JsonProperty("key.stem")
-    private List<String> keyStem;
+    private String keyStem;
 
     @JsonProperty("key.enum")
-    private List<String> keyEnum;
+    private String keyEnum;
 
     @JsonProperty("key.joined")
-    private List<String> keyJoined;
+    private String keyJoined;
 
     @JsonProperty("value.joined")
-    private List<String> valueJoined;
+    private String valueJoined;
 
     @JsonProperty("value.prefix")
-    private List<String> valuePrefix;
+    private String valuePrefix;
 
     @JsonProperty("value.delimiter")
-    private List<String> valueDelimiter;
+    private String valueDelimiter;
 
     @JsonProperty("value")
-    private List<String> value;
+    private String value;
 
     @JsonProperty("key.delimiter")
-    private List<String> keyDelimiter;
+    private String keyDelimiter;
 
     @JsonProperty("key")
-    private List<String> key;
+    private String key;
 
     @JsonProperty("value.enum")
-    private List<String> valueEnum;
+    private String valueEnum;
 
 }

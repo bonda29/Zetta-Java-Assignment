@@ -63,6 +63,10 @@ public class CostController {
         Pageable pageRequest = PageRequest.of(page, size);
 
         List<CostRecord> allEntities = costService.searchByLabelAndCountry(labelKey, labelValue, country);
+        if (allEntities.isEmpty()) {
+            return ResponseEntity.ok(assembler.toModel(new PageImpl<>(List.of(), pageRequest, 0)));
+        }
+
         int start = (int) pageRequest.getOffset();
         int end = Math.min((start + pageRequest.getPageSize()), allEntities.size());
 

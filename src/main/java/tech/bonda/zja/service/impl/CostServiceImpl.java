@@ -168,6 +168,10 @@ public class CostServiceImpl implements CostService {
     @Override
     public List<CostRecord> searchByLabelAndCountry(String labelKey, String labelValue, String country) {
         List<CostRecord> filteredRecords = costRecords;
+//        System.out.println(costRecords.stream().filter(
+//                        costRecord -> costRecord.getId().equals("xIzECo8BV89PSUMNb_Xl")
+//                ).collect(Collectors.toList())
+//        );
 
         if (labelKey != null && labelValue != null)
             filteredRecords = filterByLabelKeyAndValue(costRecords, labelKey, labelValue);
@@ -177,11 +181,11 @@ public class CostServiceImpl implements CostService {
         return filteredRecords;
     }
 
-    @SuppressWarnings({"SameParameterValue", "EqualsBetweenInconvertibleTypes"})
+    @SuppressWarnings({"SameParameterValue"})
     private List<CostRecord> filterByLabelKeyAndValue(List<CostRecord> costRecords, String labelKey, String labelValue) {
         return costRecords.parallelStream()
                 .filter(costRecord -> costRecord.getLabels().stream()
-                        .anyMatch(label -> label.getKey().equals("[" + labelKey + "]") && label.getValue().equals("[" + labelValue + "]")))
+                        .anyMatch(label -> label.getKey().equals(labelKey) && label.getValue().equals(labelValue)))
                 .collect(Collectors.toList());
     }
 
