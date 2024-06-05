@@ -10,7 +10,7 @@ import java.util.Map;
 public interface CostService {
     BigDecimal getTotalCost(Map<String, String> filters);
 
-    Map<String, BigDecimal> getCostGrouped(List<String> groupByFields);
+    List<Map<List<String>, BigDecimal>> getCostGrouped(List<String> groupByFields);
 
     List<CostRecord> searchByLabelAndCountry(String label, String country, int page, int size);
 }

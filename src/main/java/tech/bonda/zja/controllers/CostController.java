@@ -37,7 +37,7 @@ public class CostController {
     }
 
     @GetMapping("/cost-grouped")
-    public ResponseEntity<Map<String, BigDecimal>> getCostGrouped(@RequestParam List<String> groupByFields) {
+    public ResponseEntity<?> getCostGrouped(@RequestParam List<String> groupByFields) {//todo: return type
         return ResponseEntity.ok(costService.getCostGrouped(groupByFields));
     }
 

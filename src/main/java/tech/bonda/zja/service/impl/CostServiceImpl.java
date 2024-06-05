@@ -9,7 +9,6 @@ import tech.bonda.zja.util.CSVParser;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +30,7 @@ public class CostServiceImpl implements CostService {
         // Capture the start time
         long startTime = System.currentTimeMillis();
 
-        for (int i = 0; i < 3; i++) { // Load the records 3 times for testing
+        for (int i = 0; i < 1; i++) { // Load the records n times for testing
             costRecords.addAll(CSVParser.parseCostRecords("src/main/resources/costs_export.csv"));
         }
 
@@ -57,21 +56,21 @@ public class CostServiceImpl implements CostService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    @Override
-    public Map<String, BigDecimal> getCostGrouped(List<String> groupByFields) {
-        Map<String, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
-        Map<String, BigDecimal> response = new ConcurrentHashMap<>();
+    /*    @Override
+        public Map<String, BigDecimal> getCostGrouped(List<String> groupByFields) {
+            Map<String, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
+            Map<String, BigDecimal> response = new ConcurrentHashMap<>();
 
-        groupedEntries.entrySet().parallelStream().forEach(entry -> {
-            BigDecimal groupCost = entry.getValue().parallelStream()
-                    .map(CostRecord::getCost)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            response.put(entry.getKey(), groupCost);
-        });
+            groupedEntries.entrySet().parallelStream().forEach(entry -> {
+                BigDecimal groupCost = entry.getValue().parallelStream()
+                        .map(CostRecord::getCost)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                response.put(entry.getKey(), groupCost);
+            });
 
-        return response;
-    }
-
+            return response;
+        }*/
+    /*
     private Map<String, List<CostRecord>> groupEntries(List<String> groupBy) {
         Map<String, Function<CostRecord, String>> groupByFunctions = new HashMap<>();
         groupByFunctions.put("date", costRecord -> costRecord.getUsageStartTime().toLocalDate().toString());
@@ -88,6 +87,55 @@ public class CostServiceImpl implements CostService {
                 groupedByCurrentField.forEach((key, value) -> groupedEntries.put(group + ":" + key, value));
             }
         });
+
+        return groupedEntries;
+    }
+*/
+    @Override
+    public List<Map<List<String>, BigDecimal>> getCostGrouped(List<String> groupByFields) {
+        var groupedEntries = groupEntries(groupByFields);
+        List<Map<List<String>, BigDecimal>> response = new ArrayList<>();
+
+        groupedEntries.entrySet().parallelStream().forEach(entry -> {
+            BigDecimal groupCost = entry.getValue().parallelStream()
+                    .map(CostRecord::getCost)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            Map<List<String>, BigDecimal> group = new ConcurrentHashMap<>();
+            group.put(entry.getKey(), groupCost);
+            response.add(group);
+        });
+
+        return response;
+    }
+
+    public Map<List<String>, List<CostRecord>> groupEntries(List<String> groupBy) {
+        Map<List<String>, List<CostRecord>> groupedEntries = new ConcurrentHashMap<>();
+
+        List<Function<CostRecord, String>> groupByFunctions = new ArrayList<>();
+        for (String group : groupBy) {
+            switch (group) {
+                case "date":
+                    groupByFunctions.add(costRecord -> costRecord.getUsageStartTime().toLocalDate().toString());
+                    break;
+                case "country":
+                    groupByFunctions.add(CostRecord::getLocationCountry);
+                    break;
+                case "service":
+                    groupByFunctions.add(CostRecord::getServiceId);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Group by field " + group + " not supported");
+            }
+        }
+
+        groupedEntries = costRecords.parallelStream().collect(
+                Collectors.groupingBy(
+                        costRecord -> groupByFunctions.stream()
+                                .map(func -> func.apply(costRecord))
+                                .collect(Collectors.toList()),
+                        Collectors.toList()
+                )
+        );
 
         return groupedEntries;
     }
