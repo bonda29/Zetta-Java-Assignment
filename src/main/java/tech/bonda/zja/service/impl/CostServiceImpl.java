@@ -1,5 +1,6 @@
 package tech.bonda.zja.service.impl;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,42 +13,50 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static tech.bonda.zja.util.DateUtil.isAfter;
 import static tech.bonda.zja.util.DateUtil.isBefore;
 
-@Service
+/**
+ * Service implementation for handling cost records.
+ */
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class CostServiceImpl implements CostService {
+    /**
+     * List to store the loaded from file cost records.
+     */
     private static final List<CostRecord> costRecords = new ArrayList<>();
+    private static final String CSV_FILE_PATH = "src/main/resources/costs_export.csv";
 
-    static {
+    /**
+     * Loading the cost records from the file after the Spring context is fully initialized.
+     */
+    @PostConstruct
+    public void loadCostRecords() {
         log.info("Loading cost records...");
 
-        // Capture the start time
         long startTime = System.currentTimeMillis();
-
-        for (int i = 0; i < 1; i++) { // Load the records n times for testing
-            costRecords.addAll(CSVParser.parseCostRecords("src/main/resources/costs_export.csv"));
-        }
-        //sort the records by id
-        costRecords.sort(Comparator.comparing(CostRecord::getId));
-
-        // Capture the end time
-        long endTime = System.currentTimeMillis();
-
-        // Calculate the elapsed time
-        long elapsedTime = endTime - startTime;
+        costRecords.addAll(CSVParser.parseCostRecords(CSV_FILE_PATH));
+        long elapsedTime = System.currentTimeMillis() - startTime;
 
         log.info("Cost records loaded: {}", costRecords.size());
-        log.info("First cost record: {}", costRecords.get(60));
         log.info("Time taken to load cost records: {} ms", elapsedTime);
     }
 
+    /**
+     * Calculate the total cost based on provided filters.
+     *
+     * @param filters Map of filters to apply on the cost records.
+     *                Supported filters:
+     *                - startTime: Filter by the usage start time (inclusive).
+     *                - endTime: Filter by the usage end time (inclusive).
+     *                - location: Filter by the location.
+     *                - skuId: Filter by the SKU ID.
+     * @return The total cost as a BigDecimal.
+     */
     @Override
     public BigDecimal getTotalCost(Map<String, String> filters) {
         return costRecords.parallelStream()
@@ -59,119 +68,74 @@ public class CostServiceImpl implements CostService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /*    @Override
-        public Map<String, BigDecimal> getCostGrouped(List<String> groupByFields) {
-            Map<String, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
-            Map<String, BigDecimal> response = new ConcurrentHashMap<>();
-
-            groupedEntries.entrySet().parallelStream().forEach(entry -> {
-                BigDecimal groupCost = entry.getValue().parallelStream()
-                        .map(CostRecord::getCost)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
-                response.put(entry.getKey(), groupCost);
-            });
-
-            return response;
-        }*/
-    /*
-    private Map<String, List<CostRecord>> groupEntries(List<String> groupBy) {
-        Map<String, Function<CostRecord, String>> groupByFunctions = new HashMap<>();
-        groupByFunctions.put("date", costRecord -> costRecord.getUsageStartTime().toLocalDate().toString());
-        groupByFunctions.put("country", CostRecord::getLocationCountry);
-        groupByFunctions.put("service", CostRecord::getServiceId);
-
-        Map<String, List<CostRecord>> groupedEntries = new ConcurrentHashMap<>();
-
-        groupBy.parallelStream().forEach(group -> {
-            Function<CostRecord, String> groupByFunction = groupByFunctions.get(group);
-            if (groupByFunction != null) {
-                Map<String, List<CostRecord>> groupedByCurrentField = costRecords.parallelStream()
-                        .collect(Collectors.groupingBy(groupByFunction));
-                groupedByCurrentField.forEach((key, value) -> groupedEntries.put(group + ":" + key, value));
-            }
-        });
-
-        return groupedEntries;
-    }
-*/
+    /**
+     * Group cost records based on provided fields and sort them if required.
+     *
+     * @param groupByFields Fields to group the cost records by.
+     *                      Supported fields:
+     *                      - date: Group by the usage start date (format: yyyy-MM-dd)
+     *                      - country: Group by the location country code.
+     *                      - service: Group by the service ID.
+     * @param isSorted      Should the result be sorted.
+     * @return A list of maps, each containing a group of cost records and their total cost.
+     */
     @Override
     public List<Map<List<String>, BigDecimal>> getCostGrouped(List<String> groupByFields, boolean isSorted) {
-        var groupedEntries = groupEntries(groupByFields);
-        List<Map<List<String>, BigDecimal>> response = new ArrayList<>();
+        Map<List<String>, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
 
-        groupedEntries.entrySet().parallelStream().forEach(entry -> {
-            BigDecimal groupCost = entry.getValue().parallelStream()
-                    .map(CostRecord::getCost)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            Map<List<String>, BigDecimal> group = new ConcurrentHashMap<>();
-            group.put(entry.getKey(), groupCost);
-            response.add(group);
-        });
+        List<Map<List<String>, BigDecimal>> response = groupedEntries.entrySet().parallelStream()
+                .map(entry -> {
+                    BigDecimal groupCost = entry.getValue().parallelStream()
+                            .map(CostRecord::getCost)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    return Map.of(entry.getKey(), groupCost);
+                })
+                .collect(Collectors.toList());
 
-        if (isSorted) {
-            return sortGroupedEntries(response);
+        if (isSorted) { // I didn't know if I should sort the elements
+            response.sort(Comparator.comparing(entry -> entry.keySet().iterator().next().get(0)));
         }
 
         return response;
     }
 
+    /**
+     * Helper method witch groups cost records based.
+     *
+     * @param groupBy List of fields to group the cost records by.
+     * @return A map of grouped cost records.
+     */
     private Map<List<String>, List<CostRecord>> groupEntries(List<String> groupBy) {
         if (groupBy == null || groupBy.isEmpty()) {
-            Map<List<String>, List<CostRecord>> response = new ConcurrentHashMap<>();
-            List<String> key = new ArrayList<>();
-            key.add("cost");
-            response.put(key, costRecords);
-            return response;
+            return Map.of(List.of("cost"), costRecords);
         }
 
-        Map<List<String>, List<CostRecord>> groupedEntries = new ConcurrentHashMap<>();
-
-        List<Function<CostRecord, String>> groupByFunctions = new ArrayList<>();
-        for (String group : groupBy) {
-            switch (group) {
-                case "date":
-                    groupByFunctions.add(costRecord -> costRecord.getUsageStartTime().toLocalDate().toString());
-                    break;
-                case "country":
-                    groupByFunctions.add(CostRecord::getLocationCountry);
-                    break;
-                case "service":
-                    groupByFunctions.add(CostRecord::getServiceId);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Group by field " + group + " not supported");
-            }
-        }
-
-        groupedEntries = costRecords.parallelStream().collect(
+        return costRecords.parallelStream().collect(
                 Collectors.groupingBy(
-                        costRecord -> groupByFunctions.stream()
-                                .map(func -> func.apply(costRecord))
-                                .collect(Collectors.toList()),
-                        Collectors.toList()
+                        costRecord -> groupBy.stream()
+                                .map(group -> switch (group) {
+                                    case "date" -> costRecord.getUsageStartTime().toLocalDate().toString();
+                                    case "country" -> costRecord.getLocationCountry();
+                                    case "service" -> costRecord.getServiceId();
+                                    default ->
+                                            throw new IllegalArgumentException("Group by field " + group + " not supported");
+                                })
+                                .collect(Collectors.toList())
                 )
         );
-
-        return groupedEntries;
     }
 
-    private List<Map<List<String>, BigDecimal>> sortGroupedEntries(List<Map<List<String>, BigDecimal>> groupedEntries) {
-        return groupedEntries.stream()
-                .sorted((entry1, entry2) -> {
-                    List<String> key1 = entry1.keySet().iterator().next();
-                    List<String> key2 = entry2.keySet().iterator().next();
-                    return key1.get(0).compareTo(key2.get(0));
-                })
-                .collect(Collectors.toList());
-    }
-
+    /**
+     * Search cost records by label and country.
+     *
+     * @param labelKey   The label key to search by.
+     * @param labelValue The label value to search by.
+     * @param country    The country to search by.
+     * @return A list of cost records that match the criteria.
+     */
     @Override
     public List<CostRecord> searchByLabelAndCountry(String labelKey, String labelValue, String country) {
         List<CostRecord> filteredRecords = costRecords;
-//        System.out.println(costRecords.stream().filter(
-//                        costRecord -> costRecord.getId().equals("xIzECo8BV89PSUMNb_Xl")
-//                ).collect(Collectors.toList())
-//        );
 
         if (labelKey != null && labelValue != null)
             filteredRecords = filterByLabelKeyAndValue(costRecords, labelKey, labelValue);
