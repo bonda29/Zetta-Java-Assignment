@@ -1,5 +1,8 @@
 package tech.bonda.zja.controllers;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +29,24 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/cost")
+@Tag(name = "Cost", description = "Cost related operations")
 public class CostController {
 
     private final CostService costService;
 
+    @Operation(
+            summary = "Get the total cost based on provided filters",
+            responses = {
+                    @ApiResponse(
+                            description = "Total cost",
+                            responseCode = "200"
+                    ),
+                    @ApiResponse(
+                            description = "Bad Request",
+                            responseCode = "400"
+                    )
+            }
+    )
     @GetMapping("/total-cost")
     public ResponseEntity<BigDecimal> getTotalCost(@RequestParam(required = false) String startTime,
                                                    @RequestParam(required = false) String endTime,
