@@ -29,7 +29,7 @@ public class CostServiceImpl implements CostService {
      * List to store the loaded from file cost records.
      */
     private static final List<CostRecord> costRecords = new ArrayList<>();
-    private static final String CSV_FILE_PATH = "src/main/resources/costs_export.csv";
+    private static final String CSV_FILE_NAME = "costs_export.csv";
 
     /**
      * Loading the cost records from the file after the Spring context is fully initialized.
@@ -39,7 +39,7 @@ public class CostServiceImpl implements CostService {
         log.info("Loading cost records...");
 
         long startTime = System.currentTimeMillis();
-        costRecords.addAll(CSVParser.parseCostRecords(CSV_FILE_PATH));
+        costRecords.addAll(CSVParser.parseCostRecords(CSV_FILE_NAME));
         long elapsedTime = System.currentTimeMillis() - startTime;
 
         log.info("Cost records loaded: {}", costRecords.size());
