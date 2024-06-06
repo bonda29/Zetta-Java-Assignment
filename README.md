@@ -3,17 +3,22 @@
 ## Features
 
 - **Total Cost Calculation**: Calculate the total cost based on optional filters (time, location, SKU).
-- **Grouped Cost Calculation**: Group costs by specified fields (date, country, service) and calculate the total for each group.
+- **Grouped Cost Calculation**: Group costs by specified fields (date, country, service) and calculate the total for
+  each group.
 - **Search by Label and Country**: Search cost records by label key-value pairs and country with pagination support.
 - **API Documentation**: http://localhost:8080/swagger-ui.html
+- **Dockerized**: Containerized using Docker for easy setup and deployment.
+- **CSV Heading Validation**: Validate the CSV file headings to ensure the correct format.
 
 ## Endpoints
 
 ### 1. Get Total Cost
+
 **Endpoint**: `/total-cost`  
-**Method**: `GET`  
+**Method**: `GET`
 
 **Parameters**:
+
 - `startTime` (optional): Start time filter (format: `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`)
 - `endTime` (optional): End time filter (format: `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`)
 - `location` (optional): Location filter
@@ -22,20 +27,24 @@
 **Response**: `200 OK` with total cost as `BigDecimal`.
 
 ### 2. Get Cost Grouped
+
 **Endpoint**: `/cost-grouped`  
-**Method**: `GET`  
+**Method**: `GET`
 
 **Parameters**:
+
 - `fields` (optional): List of fields to group by (date, country, service)
 - `isSorted` (optional): Whether to sort the grouped results (default: false)
 
 **Response**: `200 OK` with grouped cost data.
 
 ### 3. Search by Label and Country
+
 **Endpoint**: `/search`  
-**Method**: `GET`  
+**Method**: `GET`
 
 **Parameters**:
+
 - `labelKey` (optional): Label key filter
 - `labelValue` (optional): Label value filter
 - `country` (optional): Country filter
@@ -46,7 +55,8 @@
 
 ## Docker
 
-The application is containerized using Docker. The Dockerfile is set up to use a multi-stage build to ensure a clean final image.
+The application is containerized using Docker. The Dockerfile is set up to use a multi-stage build to ensure a clean
+final image.
 
 ### Dockerfile
 
