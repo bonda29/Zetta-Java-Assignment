@@ -96,14 +96,6 @@ The API will be accessible at `http://localhost:8080`.
 
 Interactive API documentation is available at `http://localhost:8080/swagger-ui.html` once the application is running.
 
-## Testing
-
-The application includes unit tests to ensure the reliability and robustness of the functionalities. Tests can be run using the following command:
-
-```sh
-mvn test
-```
-
 ## Notes
 
 - Ensure the CSV file is placed in the correct directory `src/main/resources/`.
