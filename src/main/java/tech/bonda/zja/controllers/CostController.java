@@ -1,8 +1,5 @@
 package tech.bonda.zja.controllers;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +11,9 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tech.bonda.zja.documentation.CostControllerDocumentation;
 import tech.bonda.zja.models.CostRecord;
 import tech.bonda.zja.service.CostService;
 
@@ -29,30 +25,12 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/cost")
-@Tag(name = "Cost", description = "Cost related operations")
-public class CostController {
+public class CostController implements CostControllerDocumentation {
 
     private final CostService costService;
 
-    @Operation(
-            summary = "Get the total cost based on provided filters",
-            responses = {
-                    @ApiResponse(
-                            description = "Total cost",
-                            responseCode = "200"
-                    ),
-                    @ApiResponse(
-                            description = "Bad Request",
-                            responseCode = "400"
-                    )
-            }
-    )
-    @GetMapping("/total-cost")
-    public ResponseEntity<BigDecimal> getTotalCost(@RequestParam(required = false) String startTime,
-                                                   @RequestParam(required = false) String endTime,
-                                                   @RequestParam(required = false) String location,
-                                                   @RequestParam(required = false) String skuId) {
-
+    @Override
+    public ResponseEntity<BigDecimal> getTotalCost(String startTime, String endTime, String location, String skuId) {
         Map<String, String> filters = new HashMap<>();
         filters.put("startTime", startTime);
         filters.put("endTime", endTime);
@@ -62,20 +40,17 @@ public class CostController {
         return ResponseEntity.ok(costService.getTotalCost(filters));
     }
 
-    @GetMapping("/cost-grouped")
-    public ResponseEntity<?> getCostGrouped(@RequestParam(required = false) List<String> fields,
-                                            @RequestParam(defaultValue = "false") boolean isSorted) {//todo: return type
+    @Override
+    public ResponseEntity<?> getCostGrouped(List<String> fields, boolean isSorted) {
         return ResponseEntity.ok(costService.getCostGrouped(fields, isSorted));
     }
 
-
-    @GetMapping("/search")
-    public ResponseEntity<PagedModel<EntityModel<CostRecord>>> searchByLabelAndCountry(@RequestParam(required = false) String labelKey,
-                                                                                       @RequestParam(required = false) String labelValue,
-                                                                                       @RequestParam(required = false) String country,
-                                                                                       @RequestParam @Min(1) int page,
-                                                                                       @RequestParam @Min(0) @Max(20) int size,
-                                                                                       PagedResourcesAssembler<CostRecord> assembler) {
+    @Override
+    public ResponseEntity<PagedModel<EntityModel<CostRecord>>> searchByLabelAndCountry(
+            String labelKey, String labelValue, String country,
+            @Min(1) int page,
+            @Min(0) @Max(20) int size,
+            PagedResourcesAssembler<CostRecord> assembler) {
 
         Pageable pageRequest = PageRequest.of(page, size);
 
