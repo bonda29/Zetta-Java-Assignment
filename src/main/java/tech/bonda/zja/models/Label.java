@@ -43,4 +43,8 @@ public class Label {
     @JsonProperty("value.enum")
     private String valueEnum;
 
+    public Label(String key, String value) {
+        this.key = key;
+        this.value = value;
+    }
 }
