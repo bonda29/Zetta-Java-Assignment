@@ -5,6 +5,7 @@ import com.opencsv.bean.CsvToBeanBuilder;
 import tech.bonda.zja.models.CostRecord;
 
 import java.io.Reader;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
@@ -20,10 +21,20 @@ public class CSVParser {
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
 
-            return csvToBean.stream().collect(Collectors.toList());
+            return csvToBean.stream()
+                    .filter(CSVParser::isValidRecord)
+                    .collect(Collectors.toList());
 
         } catch (Exception ex) {
             throw new RuntimeException("Error while parsing CSV file: " + ex.getMessage());
         }
+    }
+
+    private static boolean isValidRecord(CostRecord record) {
+        if (record.getCost().compareTo(BigDecimal.ZERO) < 0) {
+            return false;
+        } else if (record.getLocationLocation().equals("-") || record.getLocationCountry().equals("-")) {
+            return false;
+        } else return record.getSkuId() != null && !record.getSkuId().isEmpty() && !record.getSkuId().equals("-");
     }
 }
