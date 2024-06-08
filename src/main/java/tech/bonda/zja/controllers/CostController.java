@@ -12,6 +12,7 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tech.bonda.zja.documentation.CostControllerDocumentation;
 import tech.bonda.zja.models.CostRecord;
@@ -30,7 +31,10 @@ public class CostController implements CostControllerDocumentation {
     private final CostService costService;
 
     @Override
-    public ResponseEntity<BigDecimal> getTotalCost(String startTime, String endTime, String location, String skuId) {
+    public ResponseEntity<BigDecimal> getTotalCost(@RequestParam(required = false) String startTime,
+                                                   @RequestParam(required = false) String endTime,
+                                                   @RequestParam(required = false) String location,
+                                                   @RequestParam(required = false) String skuId) {
         Map<String, String> filters = new HashMap<>();
         filters.put("startTime", startTime);
         filters.put("endTime", endTime);
@@ -41,15 +45,18 @@ public class CostController implements CostControllerDocumentation {
     }
 
     @Override
-    public ResponseEntity<?> getCostGrouped(List<String> fields, boolean isSorted) {
+    public ResponseEntity<List<Map<String, BigDecimal>>> getCostGrouped(@RequestParam(required = false) List<String> fields,
+                                                                        @RequestParam(defaultValue = "false") boolean isSorted) {
         return ResponseEntity.ok(costService.getCostGrouped(fields, isSorted));
     }
 
     @Override
     public ResponseEntity<PagedModel<EntityModel<CostRecord>>> searchByLabelAndCountry(
-            String labelKey, String labelValue, String country,
-            @Min(1) int page,
-            @Min(0) @Max(20) int size,
+            @RequestParam(required = false) String labelKey,
+            @RequestParam(required = false) String labelValue,
+            @RequestParam(required = false) String country,
+            @RequestParam @Min(1) int page,
+            @RequestParam @Min(0) @Max(20) int size,
             PagedResourcesAssembler<CostRecord> assembler) {
 
         Pageable pageRequest = PageRequest.of(page, size);

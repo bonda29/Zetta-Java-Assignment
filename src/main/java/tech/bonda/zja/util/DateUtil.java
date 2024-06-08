@@ -8,9 +8,12 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 
+import static tech.bonda.zja.util.DateUtil.DayTime.END_OF_DAY;
+import static tech.bonda.zja.util.DateUtil.DayTime.START_OF_DAY;
+
 public class DateUtil {
 
-    public static LocalDateTime transform(String dateTimeWithZone, boolean isStartOfDay) {
+    public static LocalDateTime transform(String dateTimeWithZone, DayTime dayTime) {
         DateTimeFormatter formatter = new DateTimeFormatterBuilder()
                 .appendPattern("yyyy-MM-dd[' 'HH:mm:ss][ z]")
                 .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
@@ -22,21 +25,25 @@ public class DateUtil {
 
         if (temporalAccessor instanceof ZonedDateTime) {
             return ((ZonedDateTime) temporalAccessor).toLocalDateTime();
-        } else {
-            if (isStartOfDay)
-                return ((LocalDate) temporalAccessor).atStartOfDay();
-            else
-                return ((LocalDate) temporalAccessor).atTime(23, 59, 59);
         }
+        if (dayTime == START_OF_DAY) {
+            return ((LocalDate) temporalAccessor).atStartOfDay();
+        }
+        return ((LocalDate) temporalAccessor).atTime(23, 59, 59);
     }
 
     public static boolean isAfter(LocalDateTime usageStartTime, String startTime) {
-        var time = DateUtil.transform(startTime, true);
+        var time = DateUtil.transform(startTime, START_OF_DAY);
         return usageStartTime.isAfter(time) || usageStartTime.isEqual(time);
     }
 
     public static boolean isBefore(LocalDateTime usageStartTime, String endTime) {
-        var time = DateUtil.transform(endTime, false);
+        var time = DateUtil.transform(endTime, END_OF_DAY);
         return usageStartTime.isBefore(time) || usageStartTime.isEqual(time);
+    }
+
+    public enum DayTime {
+        START_OF_DAY,
+        END_OF_DAY
     }
 }

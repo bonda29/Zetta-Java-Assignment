@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static tech.bonda.zja.util.DateUtil.isAfter;
@@ -59,11 +60,28 @@ public class CostServiceImpl implements CostService {
      */
     @Override
     public BigDecimal getTotalCost(Map<String, String> filters) {
+        String startTime = filters.get("startTime");
+        String endTime = filters.get("endTime");
+        String location = filters.get("location");
+        String skuId = filters.get("skuId");
+
+        List<Predicate<CostRecord>> allPredicates = new ArrayList<>();
+
+        if (startTime != null) {
+            allPredicates.add(costRecord -> isAfter(costRecord.getUsageStartTime(), startTime));
+        }
+        if (endTime != null) {
+            allPredicates.add(costRecord -> isBefore(costRecord.getUsageStartTime(), endTime));
+        }
+        if (location != null) {
+            allPredicates.add(costRecord -> costRecord.getLocationLocation().equals(location));
+        }
+        if (skuId != null) {
+            allPredicates.add(costRecord -> costRecord.getSkuId().equals(skuId));
+        }
+
         return costRecords.parallelStream()
-                .filter(costRecord -> filters.get("startTime") == null || isAfter(costRecord.getUsageStartTime(), filters.get("startTime")))
-                .filter(costRecord -> filters.get("endTime") == null || isBefore(costRecord.getUsageStartTime(), filters.get("endTime")))
-                .filter(costRecord -> filters.get("location") == null || costRecord.getLocationLocation().equals(filters.get("location")))
-                .filter(costRecord -> filters.get("skuId") == null || costRecord.getSkuId().equals(filters.get("skuId")))
+                .filter(allPredicates.stream().reduce(x -> true, Predicate::and))
                 .map(CostRecord::getCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -80,10 +98,10 @@ public class CostServiceImpl implements CostService {
      * @return A list of maps, each containing a group of cost records and their total cost.
      */
     @Override
-    public List<Map<List<String>, BigDecimal>> getCostGrouped(List<String> groupByFields, boolean isSorted) {
-        Map<List<String>, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
+    public List<Map<String, BigDecimal>> getCostGrouped(List<String> groupByFields, boolean isSorted) {
+        Map<String, List<CostRecord>> groupedEntries = groupEntries(groupByFields);
 
-        List<Map<List<String>, BigDecimal>> response = groupedEntries.entrySet().parallelStream()
+        List<Map<String, BigDecimal>> response = groupedEntries.entrySet().parallelStream()
                 .map(entry -> {
                     BigDecimal groupCost = entry.getValue().parallelStream()
                             .map(CostRecord::getCost)
@@ -92,8 +110,8 @@ public class CostServiceImpl implements CostService {
                 })
                 .collect(Collectors.toList());
 
-        if (isSorted) { // I didn't know if I should sort the elements
-            response.sort(Comparator.comparing(entry -> entry.keySet().iterator().next().get(0)));
+        if (isSorted) {
+            response.sort(Comparator.comparing(map -> map.values().iterator().next()));
         }
 
         return response;
@@ -105,9 +123,9 @@ public class CostServiceImpl implements CostService {
      * @param groupBy List of fields to group the cost records by.
      * @return A map of grouped cost records.
      */
-    private Map<List<String>, List<CostRecord>> groupEntries(List<String> groupBy) {
+    private Map<String, List<CostRecord>> groupEntries(List<String> groupBy) {
         if (groupBy == null || groupBy.isEmpty()) {
-            return Map.of(List.of("cost"), costRecords);
+            return Map.of("cost", costRecords);
         }
 
         return costRecords.parallelStream().collect(
@@ -120,7 +138,7 @@ public class CostServiceImpl implements CostService {
                                     default ->
                                             throw new IllegalArgumentException("Group by field " + group + " not supported");
                                 })
-                                .collect(Collectors.toList())
+                                .collect(Collectors.joining(","))
                 )
         );
     }
@@ -139,7 +157,7 @@ public class CostServiceImpl implements CostService {
 
         if (labelKey != null && labelValue != null)
             filteredRecords = filterByLabelKeyAndValue(costRecords, labelKey, labelValue);
-        else if (country != null)
+        if (country != null)
             filteredRecords = filterByCountry(filteredRecords, country);
 
         return filteredRecords;

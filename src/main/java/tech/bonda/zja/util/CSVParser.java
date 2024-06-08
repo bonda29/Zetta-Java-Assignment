@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,19 +39,19 @@ public class CSVParser {
     }
 
     private static boolean isValidRecord(CostRecord record) {
-        boolean response = true;
         if (record.getCost().compareTo(BigDecimal.ZERO) < 0) {
-            response = false;
-        } else if (record.getLocationLocation().equals("-") || record.getLocationCountry().equals("-")) {
-            response = false;
-        } else if (record.getSkuId() == null || record.getSkuId().isEmpty() || record.getSkuId().equals("-"))
-            response = false;
-
-        if (!response) {
             log.warn("Invalid record: {}", record);
+            return false;
         }
-
-        return response;
+        if (record.getLocationLocation().equals("-") || record.getLocationCountry().equals("-")) {
+            log.warn("Invalid record: {}", record);
+            return false;
+        }
+        if (record.getSkuId() == null || record.getSkuId().isEmpty() || record.getSkuId().equals("-")) {
+            log.warn("Invalid record: {}", record);
+            return false;
+        }
+        return true;
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -59,12 +60,11 @@ public class CSVParser {
             CSVReader csvReader = new CSVReader(reader);
             String[] headers = csvReader.readNext();
             List<String> requiredColumns = Arrays.asList("usage_start_time", "usage_end_time", "location.location", "sku.id", "cost", "location.country", "service.id", "service.description", "labels");
-            for (String column : requiredColumns) {
-                if (!Arrays.asList(headers).contains(column)) {
-                    return false;
-                }
+            boolean containsAll = new HashSet<>(Arrays.asList(headers)).containsAll(requiredColumns);
+            if (!containsAll) {
+                log.error("The CSV file does not contain the required columns: {}", requiredColumns);
             }
-            return true;
+            return containsAll;
         } catch (Exception ex) {
             throw new RuntimeException("Error while parsing CSV file: " + ex.getMessage());
         }

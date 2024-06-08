@@ -6,14 +6,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import tech.bonda.zja.models.CostRecord;
 
 import java.math.BigDecimal;
@@ -29,10 +26,10 @@ public interface CostControllerDocumentation {
             })
     @GetMapping("/total-cost")
     ResponseEntity<BigDecimal> getTotalCost(
-            @Parameter(description = "Start time filter (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss)") @RequestParam(required = false) String startTime,
-            @Parameter(description = "End time filter (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss)") @RequestParam(required = false) String endTime,
-            @Parameter(description = "Location filter") @RequestParam(required = false) String location,
-            @Parameter(description = "SKU ID filter") @RequestParam(required = false) String skuId);
+            @Parameter(description = "Start time filter (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss)") String startTime,
+            @Parameter(description = "End time filter (yyyy-MM-dd or yyyy-MM-dd HH:mm:ss)") String endTime,
+            @Parameter(description = "Location filter") String location,
+            @Parameter(description = "SKU ID filter") String skuId);
 
     @Operation(summary = "Get cost grouped", description = "Get the cost grouped by specified fields",
             responses = {
@@ -40,8 +37,8 @@ public interface CostControllerDocumentation {
             })
     @GetMapping("/cost-grouped")
     ResponseEntity<?> getCostGrouped(
-            @Parameter(description = "Fields to group by") @RequestParam(required = false) List<String> fields,
-            @Parameter(description = "Whether to sort the grouped results") @RequestParam(defaultValue = "false") boolean isSorted);
+            @Parameter(description = "Fields to group by") List<String> fields,
+            @Parameter(description = "Whether to sort the grouped results") boolean isSorted);
 
     @Operation(summary = "Search by label and country", description = "Search cost records by label key, label value, and country with pagination",
             responses = {
@@ -49,10 +46,10 @@ public interface CostControllerDocumentation {
             })
     @GetMapping("/search")
     ResponseEntity<PagedModel<EntityModel<CostRecord>>> searchByLabelAndCountry(
-            @Parameter(description = "Label key filter") @RequestParam(required = false) String labelKey,
-            @Parameter(description = "Label value filter") @RequestParam(required = false) String labelValue,
-            @Parameter(description = "Country filter") @RequestParam(required = false) String country,
-            @Parameter(description = "Page number") @RequestParam @Min(1) int page,
-            @Parameter(description = "Page size (max 20)") @RequestParam @Min(0) @Max(20) int size,
+            @Parameter(description = "Label key filter") String labelKey,
+            @Parameter(description = "Label value filter") String labelValue,
+            @Parameter(description = "Country filter") String country,
+            @Parameter(description = "Page number") int page,
+            @Parameter(description = "Page size (max 20)") int size,
             PagedResourcesAssembler<CostRecord> assembler);
 }
